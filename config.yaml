@@ -1,0 +1,81 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Parameters: {}
+
+Resources:
+  DemoVPC:
+    Type: 'AWS::EC2::VPC'
+    Properties:
+      CidrBlock: '10.0.0.0/16'
+      InstanceTenancy: 'default'
+      Tags:
+        - Key: 'Name'
+          Value: 'demo_vpc'
+
+  DemoVPC2:
+    Type: 'AWS::EC2::VPC'
+    Properties:
+      CidrBlock: '10.10.0.0/16'
+
+  DemoSubnet:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref 'DemoVPC2'
+      CidrBlock: '10.10.1.0/24'
+      Tags:
+        - Key: 'Name'
+          Value: 'demo-subnet'
+
+  DemoIGW:
+    Type: 'AWS::EC2::InternetGateway'
+    Properties:
+      Tags:
+        - Key: 'Name'
+          Value: 'demo-igw'
+  
+  DemoIGWAttachment:
+    Type: 'AWS::EC2::VPCGatewayAttachment'
+    Properties:
+      VpcId: !Ref 'DemoVPC'
+      InternetGatewayId: !Ref 'DemoIGW'
+
+  DemoRouteTable:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref 'DemoVPC'
+      Tags:
+        - Key: 'Name'
+          Value: 'demo-rt'
+  
+  DemoRoute:
+    Type: 'AWS::EC2::Route'
+    DependsOn: 'DemoIGWAttachment'
+    Properties:
+      RouteTableId: !Ref 'DemoRouteTable'
+      DestinationCidrBlock: '0.0.0.0/0'
+      GatewayId: !Ref 'DemoIGW'
+
+  DemoRouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref 'DemoSubnet'
+      RouteTableId: !Ref 'DemoRouteTable'
+
+  DemoSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupName: 'allow_tls'
+      GroupDescription: 'Allow inbound SSH traffic'
+      VpcId: !Ref 'DemoVPC'
+      SecurityGroupIngress:
+        - IpProtocol: 'tcp'
+          FromPort: 22
+          ToPort: 22
+          CidrIp: '0.0.0.0/0'
+      SecurityGroupEgress:
+        - IpProtocol: '-1'
+          FromPort: 0
+          ToPort: 0
+          CidrIp: '0.0.0.0/0'
+      Tags:
+        - Key: 'Name'
+          Value: 'allow_tls'
